@@ -1,0 +1,12 @@
+Package: BarrierOptionPrices
+Type: Package
+Title: Pricing of European Call In-and-Up Barrier Options
+Version: 1.0
+Date: 2024-01-12
+Author: Palina Tkachova
+Maintainer: Palina Tkachova <palinatx@gmail.com>
+Description: This packages prices uropean Call In-and-Up Barrier Option given the supplied parameters by the user
+License: GPL (>= 2)
+Imports: Rcpp (>= 1.0.11)
+LinkingTo: Rcpp
+RoxygenNote: 7.3.0

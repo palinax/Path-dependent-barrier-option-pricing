@@ -1,0 +1,179 @@
+---
+title: "Pricing of European Call in-and-up barries option"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-01-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## OBJECTIVE
+
+This report presents an outcome of project that aimed to price a European call in-and-up barrier option using simulation methods. The objective of this project was to create RCCP package to simulate and analyze the pricing of a European call in-and-up barrier option. By employing a Monte Carlo simulation approach, the aim was to estimate the option's fair value and examine how option features and market conditions, such as time-to-maturity ofan option and volatility andaffect European call in-and-up barrier option price. 
+
+
+## WHAT IS EUROPEAN CALL IN AND UP OPTION ABOUT?
+
+
+A European in-and-up barrier option is an exotic option that is path-dependent, meaning its value is determined by the path of the underlying asset's price, not just its final price at expiration. This option only becomes active only if the underlying asset's price reaches or exceeds a specified barrier level at any point during the option's lifetime.
+
+If the barrier is never breached, the option expires worthless, no matter what is the asset's final price. 
+
+
+## ASSUMPTIONS 
+
+The follwoing assumptions have been made in that project:
+
+- Underlying asset follows a geometric Brownian motion as per the Black-Scholes model.This implies that there are no jumps in share prices.
+
+- Number of Iterations in Monte Carlo Simulation: Each price estimate is based on 1,000 simulation repetitions.
+
+- There are no risk-free rate arbitrage opportunities
+
+- The volatility of the return of the underlying is known and constant.
+
+- Unlimited short selling of the underlying is permitted.
+
+- No taxes or transaction costs are payable.The underlying share can be traded continuously and in very small numbers of units.
+
+- Since it is a European option, it can only be exercised at maturity, not before.
+
+Barrier Feature:
+
+- The barrier level is constant over the life of the option.
+
+- The option can only be activated if the price of the underlying asset hits or exceeds the barrier level.
+
+Source: https://analystprep.com/study-notes/cfa-level-2/identify-assumptions-of-the-black-scholes-merton-option-valuation-model/
+
+
+## TESTING OPTION PRICER
+
+Please pass the parameters below: 
+
+```{r cars}
+
+# devtools::install_local("~/Desktop/Advanced R/Advanced Visualisation in R/BarrierOptionPrices")
+# library(devtools)
+# devtools::load_all()
+
+library(BarrierOptionPrices)
+
+# Defining params for calculation 
+nInt <- 100 
+barrier <- 160
+strike <- 150
+spot <- 140
+vol <- 0.24 # Volatility
+r <- 0.07 # Risk free rate 
+expiry <- 0.75
+nReps <- 1000 # N of Monte Carlo simulation
+
+
+
+# Calculate the price
+price <- priceOption(nInt, barrier, strike, spot, vol, r, expiry, nReps)
+price
+
+
+results <- data.frame(Volatility = numeric(), TimeToMaturity = numeric(), Price = numeric())
+
+for (vol in seq(0.1, 0.5, by = 0.05)) {
+  for (expiry in seq(0.5, 2, by = 0.25)) {
+    price <- priceOption(nInt, barrier, strike, spot, vol, r, expiry, nReps)
+    results <- rbind(results, data.frame(Volatility = vol, TimeToMaturity = expiry, Price = price))
+  }
+}
+
+```
+## RELATIONSHIP BETWEEN OPTION PRICE AND VOLATILITY AND TILE TO MATURITY SIMULTANEOUSLY 
+
+```{r plot1}
+
+library(ggplot2)
+
+# Plot
+plot1 <- ggplot(results, aes(x = Volatility, y = Price, color = as.factor(TimeToMaturity))) +
+  geom_line() +
+  scale_color_viridis_d() +
+  labs(title = "Option Price vs. Volatility for Different Times to Maturity",
+       x = "Volatility",
+       y = "Option Price",
+       color = "Time to Maturity") +
+  theme_minimal()
+
+print(plot1)
+
+
+```
+## SIMULATING PRICE PATHS IN R AS A VISUAL EXAMPLE OF GBM AND BARRIER 
+
+### *this chart is for illustrative purpose only 
+
+```{r plot2}
+
+
+# Simulating Geometric Brownian Motion as an visual example 
+
+t <- seq(0, expiry, length.out = nInt)
+dt <- t[2] - t[1]
+S <- matrix(0, nrow = nInt, ncol = nReps)
+S[1, ] <- spot
+
+for (i in 2:nInt) {
+  S[i, ] <- S[i - 1, ] * exp((r - 0.5 * vol^2) * dt + vol * sqrt(dt) * rnorm(nReps))
+}
+
+simulation_df <- data.frame(Time = rep(t, times = nReps), 
+                            StockPrice = as.vector(S), 
+                            Simulation = rep(1:nReps, each = nInt))
+
+# To check if each path breaches the barrier
+breached_barrier <- apply(S, 2, function(x) any(x > barrier))
+
+simulation_df <- data.frame(
+  Time = rep(t, times = nReps), 
+  StockPrice = as.vector(S), 
+  Simulation = rep(1:nReps, each = nInt),
+  BreachedBarrier = rep(breached_barrier, each = nInt) 
+)
+
+# Plot
+plot2 <- ggplot(simulation_df, aes(x = Time, y = StockPrice, group = Simulation, 
+                          color = BreachedBarrier)) + 
+  geom_line(alpha = 0.5, size = 0.5) +
+  scale_color_manual(values = c("black", "blue")) +
+  geom_hline(yintercept = barrier, color = "red", linetype = "dashed") +
+  labs(title = "Simulated Paths of Underlying Asset Price (Geometric Brownian Motion)",
+       x = "Time to Expiry",
+       y = "Underlying Asset Price",
+       color = "Barrier Breached") +
+  theme_minimal()
+
+print(plot2)
+```
+
+## RESULTS 
+
+This project had two main tasks 
+
+1) building a package to estimate the price of a European Call in and up barrier option,using Mone Carlo simulation given the parameters passed by the user 
+
+2) analyzing the relationship between option price and time-to maturity and volatility simultaneously. 
+
+This project successfully built an RCPP package to estimate the price of a Price of a European Call in and up barrier option, given parameters supplied by the user, and following the assumptions of this type of an option. 
+
+
+The observed increase in option prices with longer times to maturity and higher volatility is a reflection of the intrinsic nature of options. Longer maturities extend the period during which the underlying asset can move favorably, enhancing the option's potential value due to the time value.
+
+Simultaneously, increased volatility amplifies the underlying asset's price fluctuations, raising the probability of the option finishing in the money (profitable).
+
+These combined effects highlight the sensitivity of option pricing to time and uncertainty, as options represent a risk premium that buyers are willing to pay and sellers require, to engage in the risk transfer that options embody.
+
+
+
+
+
