@@ -1,1 +1,2 @@
-# Path-dependent-barrier-option-pricing-
+# Path dependent barrier option pricing 
+
